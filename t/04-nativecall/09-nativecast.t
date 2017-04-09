@@ -5,18 +5,23 @@ use CompileTestLib;
 use NativeCall;
 use Test;
 
-plan(9);
+plan(10);
 
 compile_test_lib('09-nativecast');
+
+class CUTE is repr('CStruct') {
+    has int32 $.i;
+}
 
 sub ReturnArray() returns Pointer is native('./09-nativecast') { * }
 my $carray = nativecast(CArray[uint32], ReturnArray());
 is $carray[0..2], (1, 2, 3), 'casting int * to CArray[uint32] works';
 
+sub ReturnStructArray() returns Pointer is native('./09-nativecast') { * }
+my $cstructarray = nativecast(CStructArray[CUTE], ReturnStructArray());
+is $cstructarray[0..2].map({$_.i}), (1, 2, 3), 'casting cute_struct * to CStructArray[CUTE] works';
+
 sub ReturnStruct() returns Pointer is native('./09-nativecast') { * };
-class CUTE is repr('CStruct') {
-    has int32 $.i;
-}
 is nativecast(CUTE, ReturnStruct()).i, 100, 'casting to CStruct works';
 
 sub ReturnInt() returns Pointer is native('./09-nativecast') { * }

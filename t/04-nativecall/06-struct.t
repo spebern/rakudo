@@ -5,16 +5,28 @@ use CompileTestLib;
 use NativeCall;
 use Test;
 
-plan 28;
+plan 29;
 
 compile_test_lib('06-struct');
 
+class IntStruct is repr('CStruct') {
+    has long $.first;
+    has long $.second;
+
+    # Work around struct members not being containerized yet.
+    submethod TWEAK {
+        $!first  = 13;
+        $!second = 17;
+    }
+}
+
 class MyStruct is repr('CStruct') {
-    has long   $.long;
-    has num64  $.num;
-    has int8   $.byte;
-    has num32  $.float;
-    has CArray $.arr;
+    has long         $.long;
+    has num64        $.num;
+    has int8         $.byte;
+    has num32        $.float;
+    has CArray       $.arr;
+    has CStructArray $.structarr;
 
     submethod TWEAK {
         $!long = 42;
@@ -25,6 +37,10 @@ class MyStruct is repr('CStruct') {
         $arr[0] = 1;
         $arr[1] = 2;
         $!arr := $arr;
+        my $structarr := CStructArray[IntStruct].new();
+        $structarr[0] = IntStruct.new();
+        $structarr[1] = IntStruct.new();
+        $!structarr := $structarr;
     }
 
     method clear-array() {
@@ -40,17 +56,6 @@ class MyStruct2 is repr('CStruct') {
     has int8         $.byte;
     has num32        $.float;
     has CArray[long] $.arr;
-}
-
-class IntStruct is repr('CStruct') {
-    has long $.first;
-    has long $.second;
-
-    # Work around struct members not being containerized yet.
-    submethod TWEAK {
-        $!first  = 13;
-        $!second = 17;
-    }
 }
 
 class NumStruct is repr('CStruct') {
@@ -99,6 +104,10 @@ class StructIntStruct is repr('CStruct') {
     has int32 $.i;
 }
 
+class CStructArrayStruct is repr('CStruct') {
+    has CStructArray $.arr;
+}
+
 sub ReturnAStruct()            returns MyStruct2 is native('./06-struct') { * }
 sub TakeAStruct(MyStruct $arg) returns int32     is native('./06-struct') { * }
 sub TakeAStructWithNullCArray(MyStruct $arg) returns int32 is native('./06-struct') { * }
@@ -121,6 +130,7 @@ is-approx $obj.num,   -3.7e0,  'getting num';
 is $obj.byte,   7,      'getting int8';
 is-approx $obj.float,  3.14e0, 'getting num32';
 is $obj.arr[1], 2,      'getting CArray and element';
+is $obj.structarr[1].first, 13, 'getting attribute from Struct inside CStructArray and element';
 
 # C-side tests:
 my $cobj = ReturnAStruct;

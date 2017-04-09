@@ -28,6 +28,15 @@ DLLEXPORT int * ReturnArray()
     return i;
 }
 
+DLLEXPORT CUTE * ReturnStructArray()
+{
+    CUTE *i = malloc(3 * sizeof(CUTE));
+    i[0].i = 1;
+    i[1].i = 2;
+    i[2].i = 3;
+    return i;
+}
+
 DLLEXPORT int * ReturnInt()
 {
     int *i = malloc(sizeof(int));

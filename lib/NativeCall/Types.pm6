@@ -60,9 +60,9 @@ our class Pointer                               is repr('CPointer') {
     method ^parameterize(Mu:U \p, Mu:U \t) {
         die "A typed pointer can only hold:\n" ~
             "  (u)int8, (u)int16, (u)int32, (u)int64, (u)long, (u)longlong, num16, num32, (s)size_t, bool, Str\n" ~
-            "  and types with representation: CArray, CPointer, CStruct, CPPStruct and CUnion" ~
+            "  and types with representation: CArray, CStructArray, CPointer, CStruct, CPPStruct and CUnion" ~
             "not: {t.^name}"
-            unless t ~~ Int|Num|Bool || t === Str|void || t.REPR eq any <CStruct CUnion CPPStruct CPointer CArray>;
+            unless t ~~ Int|Num|Bool || t === Str|void || t.REPR eq any <CStruct CUnion CPPStruct CPointer CArray CStructArray>;
         my $w := p.^mixin: TypedPointer[t.WHAT];
         $w.^set_name: "{p.^name}[{t.^name}]";
         $w;
@@ -195,4 +195,72 @@ multi sub map_return_type(Mu $type) { Mu }
 multi sub map_return_type($type) {
     nqp::istype($type, Int) ?? Int
                             !! nqp::istype($type, Num) ?? Num !! $type;
+}
+
+# CStructArray class, used to represent C arrays which inline their structs.
+our class CStructArray is repr('CStructArray') is array_type(Pointer) {
+    method AT-POS(CStructArray:D: $pos) { die "CStructArray cannot be used without a type" }
+
+    my role TypedCStructArray[::TValue] does Positional[TValue] is array_type(TValue) {
+        multi method AT-POS(::?CLASS:D \arr: $pos) is rw {
+            Proxy.new:
+                FETCH => method () {
+                    nqp::atpos(nqp::decont(arr), nqp::unbox_i($pos.Int))
+                },
+                STORE => method ($v) {
+                    nqp::bindpos(nqp::decont(arr), nqp::unbox_i($pos.Int), nqp::decont($v));
+                    self
+                }
+        }
+        multi method AT-POS(::?CLASS:D \arr: int $pos) is rw {
+            Proxy.new:
+                FETCH => method () {
+                    nqp::atpos(nqp::decont(arr), $pos)
+                },
+                STORE => method ($v) {
+                    nqp::bindpos(nqp::decont(arr), $pos, nqp::decont($v));
+                    self
+                }
+        }
+        multi method ASSIGN-POS(::?CLASS:D \arr: int $pos, \assignee) {
+            nqp::bindpos(nqp::decont(arr), $pos, nqp::decont(assignee));
+        }
+        multi method ASSIGN-POS(::?CLASS:D \arr: Int $pos, \assignee) {
+            nqp::bindpos(nqp::decont(arr), nqp::unbox_i($pos), nqp::decont(assignee));
+        }
+    }
+
+    method ^parameterize(Mu:U \arr, Mu:U \t) {
+        die "A C struct array can only hold:\n    types with representation: CStruct not: {t.^name}"
+            unless t.REPR eq 'CStruct';
+        my $mixin := TypedCStructArray[t];
+        my $what := arr.^mixin: $mixin;
+        $what.^set_name("{arr.^name}[{t.^name}]");
+        $what;
+    }
+
+    method elems { nqp::elems(self) }
+
+    method list {
+        do for ^self.elems { self.AT-POS($_) }
+    }
+
+    multi method new() { nqp::create(self) }
+    multi method new(*@values) { self.new(@values) }
+    multi method new(@values) {
+        if @values.elems -> $n {
+            my int $elems = $n - 1;
+            my $result   := nqp::create(self);  # XXX setelems would be nice
+            $result.ASSIGN-POS($elems,@values.AT-POS($elems)); # fake setelems
+            my int $i = -1;
+            nqp::while(
+              nqp::islt_i(($i = nqp::add_i($i,1)),$elems),
+              $result.ASSIGN-POS($i,@values.AT-POS($i)),
+            );
+            $result
+        }
+        else {
+            nqp::create(self)
+        }
+    }
 }

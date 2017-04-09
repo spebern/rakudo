@@ -5,9 +5,17 @@ use CompileTestLib;
 use NativeCall;
 use Test;
 
-plan 38;
+plan 46;
 
 compile_test_lib('05-arrays');
+
+class Struct is repr('CStruct') {
+    has long $.val;
+
+    method set($x) {
+        $!val = $x;
+    }
+}
 
 {
     sub ReturnADoubleArray() returns CArray[num64] is native("./05-arrays") { * }
@@ -68,14 +76,6 @@ compile_test_lib('05-arrays');
 }
 
 {
-    class Struct is repr('CStruct') {
-        has long $.val;
-
-        method set($x) {
-            $!val = $x;
-        }
-    }
-
     sub ReturnAStructArray() returns CArray[Struct] is native("./05-arrays") { * }
     my @arr := ReturnAStructArray();
     is @arr[0].val, 2, 'long in struct in element 0';
@@ -151,5 +151,33 @@ compile_test_lib('05-arrays');
     is-deeply CArray[uint8].new(@arg)[^3], (1, 2, 3),
         'creating CArray with one Positional positional works';
 }
+
+{
+    sub ReturnAStructEmbeddedArray() returns CStructArray[Struct] is native("./05-arrays") { * }
+    my @arr := ReturnAStructEmbeddedArray();
+    is @arr[0].val, 2, 'long in struct in element 0';
+    is @arr[1].val, 3, 'long in struct in element 1';
+    is @arr[2].val, 5, 'long in struct in element 2';
+
+    sub TakeAStructEmbeddedArray(CStructArray[Struct] $obj) returns int32 is native("./05-arrays") { * }
+    @arr := CStructArray[Struct].new;
+    @arr[0] = Struct.new();
+    @arr[1] = Struct.new();
+    @arr[2] = Struct.new();
+    @arr[0].set(7);
+    @arr[1].set(11);
+    @arr[2].set(13);
+
+    is-deeply @arr[100], Struct, 'out-of-bounds access on managed array';
+
+    is TakeAStructEmbeddedArray(@arr), 14, 'struct in position 0..2, C-side';
+
+    sub SetCStructArray(CStructArray[Struct] $obj) is native("./05-arrays") { * }
+    SetCStructArray(@arr);
+    is @arr[0].val, 0, 'long in struct in element 0';
+    is @arr[1].val, 1, 'long in struct in element 1';
+    is @arr[2].val, 2, 'long in struct in element 2';
+}
+
 
 # vim:ft=perl6

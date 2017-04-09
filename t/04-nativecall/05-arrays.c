@@ -52,8 +52,24 @@ DLLEXPORT Struct **ReturnAStructArray() {
     return arr;
 }
 
+DLLEXPORT Struct *ReturnAStructEmbeddedArray() {
+    Struct *arr = malloc(3*sizeof(Struct *));
+
+    arr[0].value = 2;
+    arr[1].value = 3;
+    arr[2].value = 5;
+
+    return arr;
+}
+
 DLLEXPORT int TakeAStructArray(Struct **structs) {
     if(structs[0]->value == 7 && structs[1]->value == 11 && structs[2]->value == 13)
+        return 14;
+    return 0;
+}
+
+DLLEXPORT int TakeAStructEmbeddedArray(Struct *structs) {
+    if(structs[0].value == 7 && structs[1].value == 11 && structs[2].value == 13)
         return 14;
     return 0;
 }
@@ -86,4 +102,11 @@ DLLEXPORT float SumAFloatArray(float *floats) {
 
 DLLEXPORT int TakeAStructArrayWithANull(Struct **structs) {
     return structs[1] == NULL;
+}
+
+DLLEXPORT void *SetCStructArray(Struct *structs) {
+    for (int i = 0; i < 3; i++) {
+        structs->value = i;
+        ++structs;
+    }
 }

@@ -15,6 +15,7 @@ my constant size_t        is export(:types, :DEFAULT) = NativeCall::Types::size_
 my constant ssize_t       is export(:types, :DEFAULT) = NativeCall::Types::ssize_t;
 my constant void          is export(:types, :DEFAULT) = NativeCall::Types::void;
 my constant CArray        is export(:types, :DEFAULT) = NativeCall::Types::CArray;
+my constant CStructArray  is export(:types, :DEFAULT) = NativeCall::Types::CStructArray;
 my constant Pointer       is export(:types, :DEFAULT) = NativeCall::Types::Pointer;
 my constant OpaquePointer is export(:types, :DEFAULT) = NativeCall::Types::Pointer;
 
@@ -146,12 +147,13 @@ my $type_map := nqp::hash(
 );
 
 my $repr_map := nqp::hash(
-  "CArray",    "carray",
-  "CPPStruct", "cppstruct",
-  "CPointer",  "cpointer",
-  "CStruct",   "cstruct",
-  "CUnion",    "cunion",
-  "VMArray",   "vmarray",
+  "CArray",       "carray",
+  "CStructArray", "cstructarray",
+  "CPPStruct",    "cppstruct",
+  "CPointer",     "cpointer",
+  "CStruct",      "cstruct",
+  "CUnion",       "cunion",
+  "VMArray",      "vmarray",
 );
 
 sub type_code_for(Mu ::T) {

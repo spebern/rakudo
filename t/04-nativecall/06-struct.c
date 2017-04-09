@@ -8,15 +8,17 @@
 #define DLLEXPORT extern
 #endif
 
+typedef struct { long first, second; } IntStruct;
+
 typedef struct {
     long intval;
     double numval;
     char byteval;
     float  floatval;
     long *arr;
+    IntStruct *flatarr;
 } MyStruct;
 
-typedef struct { long   first, second; } IntStruct;
 typedef struct { double first, second; } NumStruct;
 typedef struct {
     IntStruct *a;
